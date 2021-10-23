@@ -1,9 +1,13 @@
 # CloudPipe
 
-Lightweight tool for creating process steps in a data pipeline
+Lightweight python tool for creating process steps in a data pipeline allowing code to seamlessly run in cloud/local environments.
+Works as __AWS Lambda__ function with __S3__ data storage. 
+More cloud options TBD.
+
+Ideal for use with orchestration methods viz. __AWS Step Functions__
 
 ```python
-from CloudPipe import Step, MAP_RETURN
+from cloudpipe import Step, MAP_RETURN
 
 cloudmap = Step(
     location_env_key=dict(s3="ENV_DATA_BUCKET"), 
