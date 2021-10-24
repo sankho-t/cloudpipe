@@ -7,7 +7,7 @@ More cloud options TBD.
 Ideal for use with orchestration methods viz. __AWS Step Functions__
 
 ```python
-from cloudpipe import Step, MAP_RETURN
+from cloudpipe import Step
 
 cloudmap = Step(
     location_env_key=dict(s3="ENV_DATA_BUCKET"), 
@@ -20,14 +20,12 @@ cloudmap = Step(
     }, 
     destn={
         "collage": "{doc}/combined_faces.jpeg",
-        "faces": "{doc}/faces/*"
+        "faces": "{doc}/detected_faces/*"
     }, 
     list_copy_keys=['document'])
 
 def worker_detect_faces(upload: Path, collage: Path, faces: Path, 
-                        prep_retn: MAP_RETURN = None,
-                        upload_time = None,
-                        faces_args = None, **kwargs):
+                        **kwargs):
     
     detect_faces(upload, save_to=faces)
     make_collage(faces, save_to=collage)
@@ -66,11 +64,11 @@ Response:
     "faces": [
         {
             "document": {"name": 1},
-            "faces": {"Key": "faces/1/faces/0.jpeg"}
+            "faces": {"Key": "faces/1/detected_faces/0.jpeg"}
         },
         {
             "document": {"name": 1},
-            "faces": {"Key": "faces/1/faces/1.jpeg"}
+            "faces": {"Key": "faces/1/detected_faces/1.jpeg"}
         }
     ]
 }

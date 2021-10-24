@@ -14,6 +14,30 @@ from .types import *
 
 @dataclass
 class Step:
+    """ 
+    Create a decorator to seamlessly run a function in the cloud as event handler.
+
+    Parameters:
+        source: Dict[str, str]
+            Map of process key and relative path for local storage
+        destn: Dict[str, str]
+            Map of process key and relative path for cloud storage. May include wildcards: *, ?
+        list_copy_keys: List[str]
+            Process keys which should be copied into list file outputs (for wildcard paths).
+        more_info: INFO_FROM_PATH
+            Callable for getting additional return info, given path
+
+    Parameters of functions to be decorated:
+
+        argument 1..N : pathlib.Path
+            Includes both `source` and `destn` arguments (as in decorator definition)
+        argument_var : Union[dict, str]
+            Additional info var
+        argument_args : Dict[str, Any] (output)
+            Map of process key against any additional information to be returned
+
+    """
+
     location_env_key: CLOUD_STORE = field(default_factory=dict)
     """Environment variable containing the storage name (e.g. s3 bucket name).
     If not found it will directly be used as the storage name."""
@@ -103,6 +127,7 @@ class Step:
                         'statusCode': '200',
                         'body': return_body(event=event, s3map=remotemap,
                                             list_keys=multi_saves,
+                                            extra_return=extra_retn,
                                             additional_info=more_info, key_copy=list_copy_keys)
                     }
                 return handler

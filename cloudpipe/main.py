@@ -178,11 +178,19 @@ class EventFSMap:
 
 
 def return_body(event, s3map, list_keys: List[str] = None,
+                extra_return: Dict[str, Any] = None,
                 additional_info: INFO_FROM_PATH = None, key_copy: List[str] = None):
 
     out = dict(event)
-    if retn := s3map.get('_return', None):
+    if retn := s3map.get('_return'):
         out.update(retn)
+        for extra_key, value in extra_return.items():
+            if cur := out.get(extra_key):
+                if extra_key not in list_keys:
+                    assert isinstance(cur, dict)
+                    assert isinstance(value, dict)
+                    cur.update(value)
+
     for listed in list_keys:
         data = return_body_list(event, s3map=s3map, multiples_key=listed,
                                 root_list_key=listed, get_additional_info=additional_info,
@@ -190,6 +198,9 @@ def return_body(event, s3map, list_keys: List[str] = None,
         for key in key_copy:
             for item in data[listed]:
                 item.update({key: out[key]})
+                if val := extra_return.get(listed):
+                    assert isinstance(val, dict)
+                    item[listed].update(val)
         out[listed] = data[listed]
 
     return out

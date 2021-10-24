@@ -1,3 +1,4 @@
+from typing import Dict
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -22,11 +23,14 @@ class TestMultiple(unittest.TestCase):
             source={"original": "{doc}/input.jpeg"},
             destn={"objects": "{doc}/output/*.jpeg"},
             list_copy_keys=["original"])
-        def simple_worker(original: Path, objects: Path, *args, **kwargs):
+        def simple_worker(original: Path, objects: Path, objects_args: Dict[str, str],
+                          *args, **kwargs):
+
             self.assertEqual(objects, Path("dummy_path") /
                              "dummy_doc" / "output")
             (objects / "1.jpeg").touch()
             (objects / "0.jpeg").touch()
+            objects_args["total"] = "2"
 
         retn = simple_worker(
             event={"document": {"name": "dummy_doc"},
@@ -38,3 +42,6 @@ class TestMultiple(unittest.TestCase):
         up_keys = [x["objects"]["key"] for x in retn["body"]["objects"]]
         self.assertIn("objects/dummy_doc/output/0.jpeg", up_keys)
         self.assertIn("objects/dummy_doc/output/1.jpeg", up_keys)
+
+        extras = set([x["objects"]["total"] for x in retn["body"]["objects"]])
+        self.assertEqual(extras, {"2"})
