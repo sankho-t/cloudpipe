@@ -11,7 +11,7 @@ from cloudpipe import Step, MAP_RETURN
 
 cloudmap = Step(
     location_env_key=dict(s3="ENV_DATA_BUCKET"), 
-    location=dict(local="/path/to/root"))
+    local=dict(local="/path/to/root"))
 
 
 @cloudmap(

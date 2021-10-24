@@ -8,10 +8,9 @@ from cloudpipe import *
 class TestMultiple(unittest.TestCase):
     def setUp(self) -> None:
 
-        self.cmap = Step()
+        self.cmap = Step(location_env_key={'s3': 'dummy_bucket'})
         self.cmap.downloader = MagicMock()
         self.cmap.uploader = MagicMock()
-        self.cmap.in_cloud = True
 
         return super().setUp()
 
