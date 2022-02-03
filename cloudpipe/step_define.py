@@ -51,8 +51,8 @@ class Step:
     None => if unable to identify cloud env, then assume cloud environment as in `default_assume`
     """
 
-    downloader: Downloader = field(init=False)
-    uploader: Uploader = field(init=False)
+    downloader: Downloader = field(default=None)
+    uploader: Uploader = field(default=None)
 
     storage: CloudStoreBase = field(init=False)
 
