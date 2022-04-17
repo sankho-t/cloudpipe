@@ -42,6 +42,11 @@ class Step:
     """Environment variable containing the storage name (e.g. s3 bucket name).
     If not found it will directly be used as the storage name."""
 
+    arg_override_location_env_key: Dict[str, CLOUD_STORE] = \
+        field(default_factory=dict)
+    """Override `location_env_key` by function argument name.
+    Will be used only for downloading."""
+
     local: Optional[Union[Path, str]] = None
     """Path for storing data locally. If not provided, will create a temporary space."""
 
@@ -54,7 +59,12 @@ class Step:
     downloader: Downloader = field(default=None)
     uploader: Uploader = field(default=None)
 
+    arg_override_downloader: Dict[str, Downloader] = \
+        field(default_factory=dict)
     storage: CloudStoreBase = field(init=False)
+
+    save_prefix: str = field(default="")
+    "Fixed prefix for uploaded files"
 
     more_info: INFO_FROM_PATH = None
     """Callable to gather additional info for each file being uploaded"""
@@ -66,11 +76,17 @@ class Step:
                             shutil.rmtree(self.local, ignore_errors=True))
 
         if self.in_cloud is not False:
-            self.storage = new_storage(self.location_env_key)
+            new_storage_call = {}
+            self.storage = new_storage(
+                self.location_env_key, **new_storage_call)
             if (not self.storage) and (self.in_cloud is None):
+                new_storage_call = {default_assume: True}
                 self.storage = new_storage(self.location_env_key,
-                                           **{default_assume: True})
+                                           **new_storage_call)
             if self.storage:
+                for arg, store in self.arg_override_location_env_key.items():
+                    if store := new_storage(store, **new_storage_call):
+                        self.arg_override_downloader[arg] = store.downloader
                 self.downloader = self.storage.downloader
                 self.uploader = self.storage.uploader
         else:
@@ -82,6 +98,7 @@ class Step:
     def __call__(self, source: MAP_SOURCE, destn: MAP_DESTN = None,
                  list_copy_keys: List[str] = None,
                  more_info: INFO_FROM_PATH = None,
+                 pass_event_as: str = None,
                  **kwargs):
 
         multi_saves: List[str] = []
@@ -96,10 +113,16 @@ class Step:
                     with EventFSMap(
                         event=event,
                         source=source, destn=destn, root=self.local,
-                        downloader=self.downloader, uploader=self.uploader, **kwargs) \
+                        downloader=self.downloader, uploader=self.uploader,
+                        arg_override_downloader=self.arg_override_downloader,
+                        require_save_prefix=self.save_prefix,
+                        **kwargs) \
                             as (fsmap, remotemap):
 
                         args = dict(context=context)
+
+                        if pass_event_as:
+                            args[pass_event_as] = event
 
                         for key in source:
                             args[key] = fsmap[key]

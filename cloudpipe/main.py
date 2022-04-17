@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path, PurePath
 from typing import (Any, Callable, Dict, List, Optional, Tuple, Type, Union)
+import warnings
 
 from .types import *
 
@@ -26,6 +27,11 @@ class EventFSMap:
                                  List[str]]] = field(init=False)
     current_names: Dict[str, Optional[str]] = field(init=False)
 
+    require_save_prefix: str = field(default="")
+
+    arg_override_downloader: Dict[str, Downloader] = \
+        field(default_factory=dict)
+
     def __post_init__(self) -> None:
 
         if not self.root:
@@ -44,7 +50,9 @@ class EventFSMap:
         for source_name, s3_args in self.iter_fs_maps(map_=self.source, event=self.event, create_path=True,
                                                       ignore_missing_keys=self.ignore_missing_source):
             try:
-                self.downloader(**s3_args)
+                downloader = self.arg_override_downloader.get(
+                    source_name, self.downloader)
+                downloader(**s3_args)
             except DownloadError as exc:
                 raise DownloadError(
                     f"Error downloading source key {source_name}: {self.source[source_name]}, from {s3_args}:: {exc.args[0]}")
@@ -64,7 +72,11 @@ class EventFSMap:
                 if ignore_missing_keys and _name in ignore_missing_keys:
                     continue
                 raise
-            key = mapx["key"]
+            try:
+                key = mapx["key"]
+            except KeyError:
+                warnings.warn(f"'key' not found in event data: {mapx}")
+                raise
 
             destn = self.root / \
                 self.format_path_from_event(
@@ -87,6 +99,8 @@ class EventFSMap:
                 has_multiple.append(key)
                 continue
             upload_key = Path(key) / file_path
+            if self.require_save_prefix:
+                upload_key = Path(self.require_save_prefix) / upload_key
             destn_paths[key] = self.root / file_path
             if not dryrun:
                 try:
@@ -128,9 +142,12 @@ class EventFSMap:
                 file_path = file_path.relative_to(self.root)
 
             destn_paths[key].append(file_path)
-            upload_key = Path(key) / file_path.relative_to(self.root)
+            upload_key = Path(key) / file_path
+            if self.require_save_prefix:
+                upload_key = Path(self.require_save_prefix) / upload_key
             if not dryrun:
-                self.uploader(Filename=str(file_path), Key=str(upload_key))
+                self.uploader(Filename=str(self.root / file_path),
+                              Key=str(upload_key))
                 self.all_uploads[key].append(str(upload_key))
 
         return destn_paths
@@ -195,7 +212,7 @@ def return_body(event, s3map, list_keys: List[str] = None,
         data = return_body_list(event, s3map=s3map, multiples_key=listed,
                                 root_list_key=listed, get_additional_info=additional_info,
                                 top_level_list=False)
-        for key in key_copy:
+        for key in (key_copy or []):
             for item in data[listed]:
                 item.update({key: out[key]})
                 if val := extra_return.get(listed):
