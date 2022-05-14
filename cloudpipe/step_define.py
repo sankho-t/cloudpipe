@@ -146,6 +146,10 @@ class Step:
 
                         func(**args)
 
+                    self.local = Path(tempfile.mkdtemp())
+                    atexit.register(lambda:
+                                    shutil.rmtree(self.local, ignore_errors=True))
+
                     return {
                         'statusCode': '200',
                         'body': return_body(event=event, s3map=remotemap,
